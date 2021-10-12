@@ -10,4 +10,6 @@ To add your own decks, create a directory under `static` with a short descriptiv
 the web page. In that directory place the individual jpeg images for your card deck. They will be automatically included when you `go build`.
 
 
-
+TODO:
+* Add configurability to use local or zip FS instead of embed.FS
+* Spiff up the interface
