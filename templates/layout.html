@@ -1,0 +1,29 @@
+{{define "layout"}}
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>GM Apprentice Decks</title>
+    <link rel="stylesheet" href="/static/main.css">
+</head>
+<body>
+<div id="buttons">
+    <h1>Select a deck</h1>
+
+    <P>Click any deck to draw a card</P>
+    <form>
+        {{range .Decks}}
+        <a href="/?deck={{.Name}}" class="btnStack">{{.Name}}</a>
+        {{end}}
+    </form>
+</div>
+<br>
+
+<div id="card">
+    {{if .Card}}
+    <img src="/static/{{.Deck}}/{{.Card}}"/>
+    {{end}}
+</div>
+</body>
+</html>
+{{end}}

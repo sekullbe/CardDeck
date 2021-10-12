@@ -1,0 +1,6 @@
+GET http://localhost:8888/cards/Base/GMA Base VTT_Part1.jpg
+Accept: image/jpeg
+
+###
+GET http://localhost:8888
+Accept: text/html
