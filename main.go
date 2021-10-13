@@ -3,17 +3,21 @@ package main
 import (
 	"embed"
 	"html/template"
+	"io/fs"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"path"
 )
 
 // TODO move this to a new package?
 //go:embed static
-var cardsFS embed.FS
+var embedFS embed.FS
 //go:embed templates/*
 var templateFS embed.FS
+//go:embed css
+var cssFS embed.FS
 
 const cardsDir string = "static"
 
@@ -27,11 +31,24 @@ var Decks = make(map[string]*Deck)
 
 func main() {
 
-	Decks = FindDecks(cardsFS)
+	useOS := len(os.Args) > 1 && os.Args[1] == "live"
 
-	// Handler for the card images only
-	// normally put this in something like /static then strip that, but that breaks the embed fs
-	http.Handle("/" + cardsDir + "/", http.FileServer(http.FS(cardsFS)))
+	var staticFS fs.FS
+	if useOS {
+		staticFS = os.DirFS(".")
+	} else {
+		staticFS = embedFS
+	}
+
+	Decks = FindDecks(staticFS)
+
+	// TODO store the cards a user has seen in a session?
+
+	// load the cards whether they are in the OS FS or the embedded one
+	http.Handle("/" + cardsDir + "/", http.FileServer(http.FS(staticFS)))
+	// CSS is also static, but separated out so it works regardless of other static files
+	http.Handle("/css/", http.FileServer(http.FS(cssFS)))
+	// everything else is the main template
 	http.HandleFunc("/", serveTemplate)
 	log.Println(http.ListenAndServe(":8888", nil))
 }
@@ -47,6 +64,7 @@ func serveTemplate(w http.ResponseWriter, r *http.Request) {
 		card = ChooseRandomCard(Decks[desiredDeck])
 	}
 
+	// would prefer to pass this in but a handler has a fixed signature
 	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		log.Println(err)
@@ -70,18 +88,19 @@ func NewDeck(deckName string) *Deck {
 	return &d
 }
 
-func FindDecks(rootFS embed.FS) map[string]*Deck {
+func FindDecks(rootFS fs.FS) map[string]*Deck {
 
 	 decks := make(map[string]*Deck)
 
-	rootEntries, _ := rootFS.ReadDir(cardsDir)
+	rootEntries, err := fs.ReadDir(rootFS, cardsDir)
+	if err != nil {
+		log.Println(err)
+	}
 	for _, entry := range rootEntries {
 		if entry.IsDir() {
 			// Can this be done without loading all the card files? Is that actually happening or only appearing in debug because of the debugger?
-			deckEntries, err := rootFS.ReadDir(path.Join(cardsDir, entry.Name()))
-			if err != nil {
-				panic(err)
-			}
+			deckEntries := getDeckEntries(rootFS, entry)
+
 			deck := NewDeck(entry.Name())
 			deck.numCards = len(deckEntries)
 			for _, cardEntry := range deckEntries {
@@ -94,8 +113,13 @@ func FindDecks(rootFS embed.FS) map[string]*Deck {
 	return decks
 }
 
-// TODO store the cards a user has seen in a session?
-// TODO index.html is going to have to be a template
+func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
+	deckEntries, err := fs.ReadDir(rootFS, path.Join(cardsDir, deckEntry.Name()))
+	if err != nil {
+		panic(err)
+	}
+	return deckEntries
+}
 
 func ChooseRandomCard (deck *Deck) string {
 	return deck.cardNames[rand.Intn(deck.numCards)]
