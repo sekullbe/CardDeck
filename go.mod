@@ -1,5 +1,6 @@
 module github.com/sekullbe/carddeck
 
+// +heroku goVersion go1.17
 go 1.17
 
 require github.com/stretchr/testify v1.7.0

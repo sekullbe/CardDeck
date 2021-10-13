@@ -14,7 +14,7 @@ import (
 // TODO move this to a new package?
 //go:embed static
 var embedFS embed.FS
-//go:embed templates/*
+//go:embed templates
 var templateFS embed.FS
 //go:embed css
 var cssFS embed.FS
@@ -30,7 +30,7 @@ type Deck struct {
 var Decks = make(map[string]*Deck)
 
 func main() {
-
+	port := getEnv("PORT", "8888")
 	useOS := len(os.Args) > 1 && os.Args[1] == "live"
 
 	var staticFS fs.FS
@@ -50,7 +50,8 @@ func main() {
 	http.Handle("/css/", http.FileServer(http.FS(cssFS)))
 	// everything else is the main template
 	http.HandleFunc("/", serveTemplate)
-	log.Println(http.ListenAndServe(":8888", nil))
+	log.Println("Running: go to http://localhost:" + port)
+	log.Println(http.ListenAndServe(":" + port, nil))
 }
 
 func serveTemplate(w http.ResponseWriter, r *http.Request) {
@@ -125,4 +126,10 @@ func ChooseRandomCard (deck *Deck) string {
 	return deck.cardNames[rand.Intn(deck.numCards)]
 }
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
 
