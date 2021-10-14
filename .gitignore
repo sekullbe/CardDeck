@@ -1,2 +1,8 @@
-static/*/*jpg
+# don't push any personal card images
+static/*
+# placeholder to make git keep the directory
+!static/empty.txt
+# These are public domain or otherwise free
+!static/Poker\ Cards
+!static/Tarot
 carddeck
