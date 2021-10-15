@@ -5,4 +5,7 @@ decks/*
 # These are public domain or otherwise free
 !decks/Poker\ Cards
 !decks/Tarot
+# binaries
 carddeck
+carddeck-linux
+carddeck.exe
