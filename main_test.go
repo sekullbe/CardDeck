@@ -2,20 +2,21 @@ package main
 
 import (
 	"embed"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-//go:embed templates static
+//go:embed templates decks
 var testContent embed.FS
 
-// this test works in my local environment that has four decks but those aren't mine to share so aren't distributed
+// this test is not great; if you add more decks in your local environment it will fail.
 func Test_FindDecks(t *testing.T) {
 
 	var decks map[string]*Deck
 	decks = FindDecks(testContent)
-	assert.Equal(t, 4, len(decks), "this should have been four decks but was %d", len(decks))
+	assert.Equal(t, 2, len(decks), "this should have been 2 decks but was %d", len(decks))
 
 }
 
@@ -24,7 +25,7 @@ func Test_FindDecks_diskFS(t *testing.T) {
 	diskFS := os.DirFS(".")
 	var decks map[string]*Deck
 	decks = FindDecks(diskFS)
-	assert.Equal(t, 4, len(decks), "this should have been four decks but was %d", len(decks))
+	assert.Equal(t, 2, len(decks), "this should have been 2 decks but was %d", len(decks))
 
 }
 

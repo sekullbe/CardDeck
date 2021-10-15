@@ -13,7 +13,7 @@ RUN go mod download
 
 COPY *.go ./
 COPY templates ./templates
-COPY static ./static
+COPY decks ./static
 COPY css ./css
 
 RUN go build -o /carddeck

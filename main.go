@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"html/template"
 	"io/fs"
 	"log"
@@ -12,14 +13,14 @@ import (
 )
 
 // TODO move this to a new package?
-//go:embed static
+//go:embed decks
 var embedFS embed.FS
 //go:embed templates
 var templateFS embed.FS
 //go:embed css
 var cssFS embed.FS
 
-const cardsDir string = "static"
+const decksDir string = "decks"
 
 type Deck struct {
 	Name     string
@@ -30,28 +31,44 @@ type Deck struct {
 var Decks = make(map[string]*Deck)
 
 func main() {
-	port := getEnv("PORT", "8888")
-	useOS := len(os.Args) > 1 && os.Args[1] == "live"
 
-	var staticFS fs.FS
-	if useOS {
-		staticFS = os.DirFS(".")
-	} else {
-		staticFS = embedFS
+	port := flag.String("port", "8888", "default http port")
+	useBuiltinDecks := flag.Bool("builtin", false, "use built-in decks")
+	flag.Parse()
+
+	localDecksExist := false
+	if _, err := os.Stat(decksDir); !os.IsNotExist(err) {
+		localDecksExist = true
 	}
 
-	Decks = FindDecks(staticFS)
+	var decksFS fs.FS
+	// If local decks exist and we're not asked to use builtin decks anyway, use the local decks
+	if localDecksExist && !*useBuiltinDecks {
+		decksFS = os.DirFS(".")
+		log.Println("Running with local decks")
+	} else {
+		log.Println("Running with embedded decks")
+		decksFS = embedFS
+	}
+
+	Decks = FindDecks(decksFS)
+
+	var deckNames []string
+	for _, d := range Decks {
+		deckNames = append(deckNames, d.Name)
+	}
+	log.Println("Known decks:", deckNames)
 
 	// TODO store the cards a user has seen in a session?
 
-	// load the cards whether they are in the OS FS or the embedded one
-	http.Handle("/" + cardsDir + "/", http.FileServer(http.FS(staticFS)))
+	// load the decks whether they are in the OS FS or the embedded one
+	http.Handle("/" +decksDir+ "/", http.FileServer(http.FS(decksFS)))
 	// CSS is also static, but separated out so it works regardless of other static files
 	http.Handle("/css/", http.FileServer(http.FS(cssFS)))
 	// everything else is the main template
 	http.HandleFunc("/", serveTemplate)
-	log.Println("Running: go to http://localhost:" + port)
-	log.Println(http.ListenAndServe(":" + port, nil))
+	log.Println("Ready at http://localhost:" + *port)
+	log.Println(http.ListenAndServe(":" + *port, nil))
 }
 
 func serveTemplate(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +110,7 @@ func FindDecks(rootFS fs.FS) map[string]*Deck {
 
 	 decks := make(map[string]*Deck)
 
-	rootEntries, err := fs.ReadDir(rootFS, cardsDir)
+	rootEntries, err := fs.ReadDir(rootFS, decksDir)
 	if err != nil {
 		log.Println(err)
 	}
@@ -115,7 +132,7 @@ func FindDecks(rootFS fs.FS) map[string]*Deck {
 }
 
 func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
-	deckEntries, err := fs.ReadDir(rootFS, path.Join(cardsDir, deckEntry.Name()))
+	deckEntries, err := fs.ReadDir(rootFS, path.Join(decksDir, deckEntry.Name()))
 	if err != nil {
 		panic(err)
 	}
@@ -124,12 +141,5 @@ func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
 
 func ChooseRandomCard (deck *Deck) string {
 	return deck.cardNames[rand.Intn(deck.numCards)]
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }
 
