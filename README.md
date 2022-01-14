@@ -31,6 +31,7 @@ so it's not very important that it be perfect.
 TODO:
 * Store the cards a user has seen in a session, so they don't get repeats without asking to reshuffle the decks
 * Add documentation links like an image of a sample card from the GMA manual
+* Allow loading decks from zip files instead of open directories
 
 Fun but pointless changes:
 * Rewrite using a framework like Echo. Any framework is overkill for this because it just serves one template, 
