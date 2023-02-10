@@ -13,20 +13,33 @@ import (
 )
 
 // TODO move this to a new package?
+//
 //go:embed decks
 var embedFS embed.FS
+
 //go:embed templates
 var templateFS embed.FS
+
 //go:embed css
 var cssFS embed.FS
 
 const decksDir string = "decks"
 
 type Deck struct {
-	Name     string
-	numCards int  // this is redundant, but meh.
+	Name      string
+	numCards  int // this is redundant, but meh.
 	cardNames []string
 }
+
+// for login, i need a DB of users and the decks they have access to
+// that'll give a JWT or equivalent that contains the access list
+// can remove most of the code for running one's own server; it'll run in a controlled server environment.
+// on start connect to the db
+// make an interceptor to look for auth
+// if you have none go to login
+// if you do, does it authorize the deck you want?
+// OR if you're listing decks, list only the ones you have
+// does this mean rewriting in a new framework that makes things easier?
 
 var Decks = make(map[string]*Deck)
 
@@ -62,13 +75,13 @@ func main() {
 	// TODO store the cards a user has seen in a session?
 
 	// load the decks whether they are in the OS FS or the embedded one
-	http.Handle("/" +decksDir+ "/", http.FileServer(http.FS(decksFS)))
+	http.Handle("/"+decksDir+"/", http.FileServer(http.FS(decksFS)))
 	// CSS is also static, but separated out so it works regardless of other static files
 	http.Handle("/css/", http.FileServer(http.FS(cssFS)))
 	// everything else is the main template
 	http.HandleFunc("/", serveTemplate)
 	log.Println("Ready at http://localhost:" + *port)
-	log.Println(http.ListenAndServe(":" + *port, nil))
+	log.Println(http.ListenAndServe(":"+*port, nil))
 }
 
 func serveTemplate(w http.ResponseWriter, r *http.Request) {
@@ -88,12 +101,12 @@ func serveTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	err = tmpl.ExecuteTemplate(w, "layout", struct {
-		Card string
-		Deck string
+		Card  string
+		Deck  string
 		Decks map[string]*Deck
 	}{
-		Card: card,
-		Deck: desiredDeck,
+		Card:  card,
+		Deck:  desiredDeck,
 		Decks: Decks,
 	})
 	if err != nil {
@@ -108,7 +121,7 @@ func NewDeck(deckName string) *Deck {
 
 func FindDecks(rootFS fs.FS) map[string]*Deck {
 
-	 decks := make(map[string]*Deck)
+	decks := make(map[string]*Deck)
 
 	rootEntries, err := fs.ReadDir(rootFS, decksDir)
 	if err != nil {
@@ -139,7 +152,6 @@ func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
 	return deckEntries
 }
 
-func ChooseRandomCard (deck *Deck) string {
+func ChooseRandomCard(deck *Deck) string {
 	return deck.cardNames[rand.Intn(deck.numCards)]
 }
-
