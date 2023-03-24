@@ -3,6 +3,8 @@ package main
 import (
 	"embed"
 	"flag"
+	"fmt"
+	"github.com/gorilla/mux"
 	"html/template"
 	"io/fs"
 	"log"
@@ -74,39 +76,44 @@ func main() {
 
 	// TODO store the cards a user has seen in a session?
 
-	// load the decks whether they are in the OS FS or the embedded one
-	http.Handle("/"+decksDir+"/", http.FileServer(http.FS(decksFS)))
-	// CSS is also static, but separated out so it works regardless of other static files
-	http.Handle("/css/", http.FileServer(http.FS(cssFS)))
-	// everything else is the main template
-	http.HandleFunc("/", serveTemplate)
+	r := mux.NewRouter()
+
+	r.PathPrefix("/" + decksDir + "/").Handler(http.FileServer(http.FS(decksFS)))
+	r.PathPrefix("/css/").Handler(http.FileServer(http.FS(decksFS)))
+	r.HandleFunc("/card/{deck}", serveDeck)
+	r.HandleFunc("/", serveTemplate)
+
 	log.Println("Ready at http://localhost:" + *port)
-	log.Println(http.ListenAndServe(":"+*port, nil))
+	log.Println(http.ListenAndServe(":"+*port, r))
+	//http.Handle("/", r)
 }
 
-func serveTemplate(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+func serveDeck(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	deck := vars["deck"]
+	var card string
+	if deck != "" {
+		card = ChooseRandomCard(Decks[deck])
+	}
+	var imgTag string
+	if len(card) > 0 {
+		imgTag = fmt.Sprintf(`<img src="/decks/%s/%s"/>`, deck, card)
+	}
+	_, err := w.Write([]byte(imgTag))
 	if err != nil {
 		log.Println(err)
 	}
-	desiredDeck := r.Form.Get("deck")
-	var card string
-	if desiredDeck != "" {
-		card = ChooseRandomCard(Decks[desiredDeck])
-	}
+}
 
+func serveTemplate(w http.ResponseWriter, r *http.Request) {
 	// would prefer to pass this in but a handler has a fixed signature
-	tmpl, err := template.ParseFS(templateFS, "templates/*.html")
+	tmpl, err := template.ParseFS(templateFS, "templates/*.gohtml")
 	if err != nil {
 		log.Println(err)
 	}
 	err = tmpl.ExecuteTemplate(w, "layout", struct {
-		Card  string
-		Deck  string
 		Decks map[string]*Deck
 	}{
-		Card:  card,
-		Deck:  desiredDeck,
 		Decks: Decks,
 	})
 	if err != nil {
