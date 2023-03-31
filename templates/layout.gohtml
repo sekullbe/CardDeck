@@ -1,6 +1,6 @@
 {{define "layout"}}
 <!doctype html>
-<html>
+<html lang="en_US">
 <head>
     <meta charset="utf-8">
     <title>CardDeck</title>
@@ -14,9 +14,7 @@
     <P>Click any deck to draw a card</P>
     <form>
         {{range .Decks}}
-        <a hx-get="/card/{{.Name}}" class="btnStack" hx-target="#card">{{.Name}}
-        <!--    <img class="htmx-indicator" src="/spinner.gif"> -->
-        </a>
+        <a hx-get="/card/{{.Name}}" class="btnStack" hx-target="#card">{{.Name}}</a>
         {{end}}
     </form>
 </div>

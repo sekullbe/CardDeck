@@ -11,19 +11,24 @@ import (
 //go:embed templates decks
 var testContent embed.FS
 
-// this test is not great; if you add more decks in your local environment it will fail.
-func Test_FindDecks(t *testing.T) {
+func Test_FindDecks_embedFS(t *testing.T) {
+
+	de, _ := testContent.ReadDir(decksDir)
+	deckCount := len(de)
 
 	decks := FindDecks(testContent)
-	assert.Equal(t, 2, len(decks), "this should have been 2 decks but was %d", len(decks))
+	assert.Equal(t, deckCount, len(decks), "this should have been %d decks but was %d", deckCount, len(decks))
 
 }
 
 func Test_FindDecks_diskFS(t *testing.T) {
 
+	de, _ := testContent.ReadDir(decksDir)
+	deckCount := len(de)
+
 	diskFS := os.DirFS(".")
 	decks := FindDecks(diskFS)
-	assert.Equal(t, 2, len(decks), "this should have been 2 decks but was %d", len(decks))
+	assert.Equal(t, deckCount, len(decks), "this should have been %d decks but was %d", deckCount, len(decks))
 
 }
 

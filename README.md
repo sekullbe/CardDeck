@@ -33,10 +33,6 @@ TODO:
 * Add documentation links like an image of a sample card from the GMA manual
 * Allow loading decks from zip files instead of open directories
 
-Fun but pointless changes:
-* Rewrite using a framework like Echo. Any framework is overkill for this because it just serves one template, 
-one static CSS file, and a FS full of images, but it would be a useful learning project.
-
 Credits:
 * Tarot deck from [Luciella Elisabeth Scarlett](https://luciellaes.itch.io/rider-waite-smith-tarot-cards-cc0) (Public Domain and CC0 license)
 * Poker deck from [Byron Knoll](http://byronknoll.blogspot.com/2011/03/vector-playing-cards.html) (Public Domain)
