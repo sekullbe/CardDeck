@@ -79,7 +79,7 @@ func main() {
 	r := mux.NewRouter()
 
 	r.PathPrefix("/" + decksDir + "/").Handler(http.FileServer(http.FS(decksFS)))
-	r.PathPrefix("/css/").Handler(http.FileServer(http.FS(decksFS)))
+	r.PathPrefix("/css/").Handler(http.FileServer(http.FS(cssFS)))
 	r.HandleFunc("/card/{deck}", serveDeck)
 	r.HandleFunc("/", serveTemplate)
 
