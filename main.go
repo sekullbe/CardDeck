@@ -97,7 +97,7 @@ func serveDeck(w http.ResponseWriter, r *http.Request) {
 	}
 	var imgTag string
 	if len(card) > 0 {
-		imgTag = fmt.Sprintf(`<img src="/decks/%s/%s"/>`, deck, card)
+		imgTag = fmt.Sprintf(`<img id="cardImg" src="/decks/%s/%s"/>`, deck, card)
 	}
 	_, err := w.Write([]byte(imgTag))
 	if err != nil {

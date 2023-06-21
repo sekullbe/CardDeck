@@ -11,16 +11,16 @@
 <div id="buttons">
     <h1>Select a deck</h1>
 
-    <P>Click any deck to draw a card</P>
-    <form>
+    <P>Click any deck to draw a card. Click a card to invert it.</P>
+
         {{range .Decks}}
         <a hx-get="/card/{{.Name}}" class="btnStack" hx-target="#card">{{.Name}}</a>
         {{end}}
-    </form>
+    <br/>
 </div>
 <br>
 
-<div id="card">
+<div id="card" onclick="document.getElementById('cardImg').classList.toggle('flipped')">
 </div>
 </body>
 </html>

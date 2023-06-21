@@ -8,6 +8,10 @@ img {
     width: 500px;
 }
 
+.flipped {
+    transform: rotate(180deg);
+}
+
 .btnStack {
     background-color: darkgreen;
     color: white;
