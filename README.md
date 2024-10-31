@@ -32,6 +32,8 @@ TODO:
 * Store the cards a user has seen in a session, so they don't get repeats without asking to reshuffle the decks
 * Add documentation links like an image of a sample card from the GMA manual
 * Allow loading decks from zip files instead of open directories
+* Switch to randomize inverting cards on draw
+* redo in a tool like gowebly or gohtmx
 
 Credits:
 * Tarot deck from [Luciella Elisabeth Scarlett](https://luciellaes.itch.io/rider-waite-smith-tarot-cards-cc0) (Public Domain and CC0 license)
