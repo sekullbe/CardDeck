@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /carddeck .
 ##
 ## Deploy
 ##
-FROM alpine:latest
+FROM scratch
 WORKDIR /
 COPY --from=build /carddeck /carddeck
 EXPOSE 8888
