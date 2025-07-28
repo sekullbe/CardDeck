@@ -2,9 +2,11 @@ package main
 
 import (
 	"embed"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"html/template"
 	"io/fs"
 	"log"
@@ -45,6 +47,14 @@ type Deck struct {
 
 var Decks = make(map[string]*Deck)
 
+// Session store for tracking drawn cards
+var store = sessions.NewCookieStore([]byte("your-secret-key-change-in-production"))
+
+func init() {
+	// Register map[string]bool type with gob for proper serialization
+	gob.Register(map[string]bool{})
+}
+
 func main() {
 
 	port := flag.String("port", "8888", "default http port")
@@ -74,13 +84,12 @@ func main() {
 	}
 	log.Println("Known decks:", deckNames)
 
-	// TODO store the cards a user has seen in a session?
-
 	r := mux.NewRouter()
 
 	r.PathPrefix("/" + decksDir + "/").Handler(http.FileServer(http.FS(decksFS)))
 	r.PathPrefix("/css/").Handler(http.FileServer(http.FS(cssFS)))
 	r.HandleFunc("/card/{deck}", serveDeck)
+	r.HandleFunc("/shuffle/{deck}", shuffleDeck)
 	r.HandleFunc("/", serveTemplate)
 
 	log.Println("Ready at http://localhost:" + *port)
@@ -90,16 +99,115 @@ func main() {
 
 func serveDeck(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	deck := vars["deck"]
-	var card string
-	if deck != "" {
-		card = ChooseRandomCard(Decks[deck])
+	deckName := vars["deck"]
+	
+	if deckName == "" {
+		http.Error(w, "Deck name required", http.StatusBadRequest)
+		return
 	}
+	
+	deck, exists := Decks[deckName]
+	if !exists {
+		http.Error(w, "Deck not found", http.StatusNotFound)
+		return
+	}
+	
+	// Get or create session
+	session, err := store.Get(r, "card-session")
+	if err != nil {
+		log.Printf("Error getting session: %v", err)
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Get drawn cards for this deck from session
+	sessionKey := fmt.Sprintf("drawn_%s", deckName)
+	drawnCardsInterface, exists := session.Values[sessionKey]
+	var drawnCards map[string]bool
+	
+	if exists {
+		if drawnMap, ok := drawnCardsInterface.(map[string]bool); ok {
+			drawnCards = drawnMap
+		} else {
+			log.Printf("Session data type assertion failed for key %s", sessionKey)
+			drawnCards = make(map[string]bool)
+		}
+	} else {
+		drawnCards = make(map[string]bool)
+	}
+	
+	log.Printf("Deck: %s, Previously drawn cards: %v", deckName, drawnCards)
+	
+	// Choose a card that hasn't been drawn
+	card := ChooseUndrawnCard(deck, drawnCards)
+	
 	var imgTag string
-	if len(card) > 0 {
-		imgTag = fmt.Sprintf(`<img id="cardImg" src="/decks/%s/%s"/>`, deck, card)
+	var message string
+	
+	if card != "" {
+		// Mark card as drawn
+		drawnCards[card] = true
+		session.Values[sessionKey] = drawnCards
+		
+		log.Printf("Drew card: %s, Total drawn: %d/%d", card, len(drawnCards), deck.numCards)
+		
+		// Save session
+		err = session.Save(r, w)
+		if err != nil {
+			log.Printf("Error saving session: %v", err)
+		}
+		
+		imgTag = fmt.Sprintf(`<img id="cardImg" src="/decks/%s/%s"/>`, deckName, card)
+		
+		// Check if deck is exhausted
+		if len(drawnCards) >= deck.numCards {
+			message = `<p style="color: orange; font-weight: bold;">All cards drawn! Click shuffle to reset.</p>`
+		}
+	} else {
+		message = `<p style="color: red; font-weight: bold;">All cards have been drawn! Click shuffle to reset the deck.</p>`
 	}
-	_, err := w.Write([]byte(imgTag))
+	
+	response := imgTag + message
+	_, err = w.Write([]byte(response))
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func shuffleDeck(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	deckName := vars["deck"]
+	
+	if deckName == "" {
+		http.Error(w, "Deck name required", http.StatusBadRequest)
+		return
+	}
+	
+	// Get or create session
+	session, err := store.Get(r, "card-session")
+	if err != nil {
+		log.Printf("Error getting session: %v", err)
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Clear drawn cards for this deck
+	sessionKey := fmt.Sprintf("drawn_%s", deckName)
+	session.Values[sessionKey] = make(map[string]bool)
+	
+	log.Printf("Shuffled deck: %s", deckName)
+	
+	// Save session
+	err = session.Save(r, w)
+	if err != nil {
+		log.Printf("Error saving session: %v", err)
+		http.Error(w, "Error shuffling deck", http.StatusInternalServerError)
+		return
+	}
+	
+	// Return success message
+	message := `<p style="color: green; font-weight: bold;">Deck shuffled! All cards are available again.</p>`
+	_, err = w.Write([]byte(message))
 	if err != nil {
 		log.Println(err)
 	}
@@ -157,6 +265,21 @@ func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
 		panic(err)
 	}
 	return deckEntries
+}
+
+func ChooseUndrawnCard(deck *Deck, drawnCards map[string]bool) string {
+	var availableCards []string
+	for _, card := range deck.cardNames {
+		if !drawnCards[card] {
+			availableCards = append(availableCards, card)
+		}
+	}
+	
+	if len(availableCards) == 0 {
+		return ""
+	}
+	
+	return availableCards[rand.Intn(len(availableCards))]
 }
 
 func ChooseRandomCard(deck *Deck) string {

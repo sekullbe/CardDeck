@@ -11,10 +11,13 @@
 <div id="buttons">
     <h1>Select a deck</h1>
 
-    <P>Click any deck to draw a card. Click a card to invert it.</P>
+    <P>Click any deck to draw a card. Click a card to invert it. Click shuffle to reset a deck.</P>
 
         {{range .Decks}}
-        <a hx-get="/card/{{.Name}}" class="btnStack" hx-target="#card">{{.Name}}</a>
+        <div class="deck-controls">
+            <a hx-get="/card/{{.Name}}" class="btnStack" hx-target="#card">{{.Name}}</a>
+            <a hx-get="/shuffle/{{.Name}}" class="btnShuffle" hx-target="#card">Shuffle {{.Name}}</a>
+        </div>
         {{end}}
     <br/>
 </div>

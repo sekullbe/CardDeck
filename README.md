@@ -29,7 +29,6 @@ event, running an application in Docker that's already optimized to be a single 
 so it's not very important that it be perfect.
 
 TODO:
-* Store the cards a user has seen in a session, so they don't get repeats without asking to reshuffle the decks
 * Add documentation links like an image of a sample card from the GMA manual
 * Allow loading decks from zip files instead of open directories
 * Switch to randomize inverting cards on draw
