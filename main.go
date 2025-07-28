@@ -7,17 +7,14 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/sekullbe/carddeck/pkg/decks"
 	"html/template"
 	"io/fs"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"path"
 )
 
-// TODO move this to a new package?
-//
 //go:embed decks
 var embedFS embed.FS
 
@@ -26,14 +23,6 @@ var templateFS embed.FS
 
 //go:embed css
 var cssFS embed.FS
-
-const decksDir string = "decks"
-
-type Deck struct {
-	Name      string
-	numCards  int // this is redundant, but meh.
-	cardNames []string
-}
 
 // for login, i need a DB of users and the decks they have access to
 // that'll give a JWT or equivalent that contains the access list
@@ -45,7 +34,7 @@ type Deck struct {
 // OR if you're listing decks, list only the ones you have
 // does this mean rewriting in a new framework that makes things easier?
 
-var Decks = make(map[string]*Deck)
+var Decks = make(map[string]*decks.Deck)
 
 // Session store for tracking drawn cards
 var store = sessions.NewCookieStore([]byte("your-secret-key-change-in-production"))
@@ -62,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	localDecksExist := false
-	if _, err := os.Stat(decksDir); !os.IsNotExist(err) {
+	if _, err := os.Stat("decks"); !os.IsNotExist(err) {
 		localDecksExist = true
 	}
 
@@ -76,7 +65,7 @@ func main() {
 		decksFS = embedFS
 	}
 
-	Decks = FindDecks(decksFS)
+	Decks = decks.FindDecks(decksFS)
 
 	var deckNames []string
 	for _, d := range Decks {
@@ -86,7 +75,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.PathPrefix("/" + decksDir + "/").Handler(http.FileServer(http.FS(decksFS)))
+	r.PathPrefix("/decks/").Handler(http.FileServer(http.FS(decksFS)))
 	r.PathPrefix("/css/").Handler(http.FileServer(http.FS(cssFS)))
 	r.HandleFunc("/card/{deck}", serveDeck)
 	r.HandleFunc("/shuffle/{deck}", shuffleDeck)
@@ -139,7 +128,7 @@ func serveDeck(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Deck: %s, Previously drawn cards: %v", deckName, drawnCards)
 	
 	// Choose a card that hasn't been drawn
-	card := ChooseUndrawnCard(deck, drawnCards)
+	card := decks.ChooseUndrawnCard(deck, drawnCards)
 	
 	var imgTag string
 	var message string
@@ -149,7 +138,7 @@ func serveDeck(w http.ResponseWriter, r *http.Request) {
 		drawnCards[card] = true
 		session.Values[sessionKey] = drawnCards
 		
-		log.Printf("Drew card: %s, Total drawn: %d/%d", card, len(drawnCards), deck.numCards)
+		log.Printf("Drew card: %s, Total drawn: %d/%d", card, len(drawnCards), deck.NumCards)
 		
 		// Save session
 		err = session.Save(r, w)
@@ -160,7 +149,7 @@ func serveDeck(w http.ResponseWriter, r *http.Request) {
 		imgTag = fmt.Sprintf(`<img id="cardImg" src="/decks/%s/%s"/>`, deckName, card)
 		
 		// Check if deck is exhausted
-		if len(drawnCards) >= deck.numCards {
+		if len(drawnCards) >= deck.NumCards {
 			message = `<p style="color: orange; font-weight: bold;">All cards drawn! Click shuffle to reset.</p>`
 		}
 	} else {
@@ -220,68 +209,11 @@ func serveTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	err = tmpl.ExecuteTemplate(w, "layout", struct {
-		Decks map[string]*Deck
+		Decks map[string]*decks.Deck
 	}{
 		Decks: Decks,
 	})
 	if err != nil {
 		log.Println(err)
 	}
-}
-
-func NewDeck(deckName string) *Deck {
-	d := Deck{Name: deckName}
-	return &d
-}
-
-func FindDecks(rootFS fs.FS) map[string]*Deck {
-
-	decks := make(map[string]*Deck)
-
-	rootEntries, err := fs.ReadDir(rootFS, decksDir)
-	if err != nil {
-		log.Println(err)
-	}
-	for _, entry := range rootEntries {
-		if entry.IsDir() {
-			// Can this be done without loading all the card files? Is that actually happening or only appearing in debug because of the debugger?
-			deckEntries := getDeckEntries(rootFS, entry)
-
-			deck := NewDeck(entry.Name())
-			deck.numCards = len(deckEntries)
-			for _, cardEntry := range deckEntries {
-				deck.cardNames = append(deck.cardNames, cardEntry.Name())
-			}
-			decks[deck.Name] = deck
-		}
-
-	}
-	return decks
-}
-
-func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
-	deckEntries, err := fs.ReadDir(rootFS, path.Join(decksDir, deckEntry.Name()))
-	if err != nil {
-		panic(err)
-	}
-	return deckEntries
-}
-
-func ChooseUndrawnCard(deck *Deck, drawnCards map[string]bool) string {
-	var availableCards []string
-	for _, card := range deck.cardNames {
-		if !drawnCards[card] {
-			availableCards = append(availableCards, card)
-		}
-	}
-	
-	if len(availableCards) == 0 {
-		return ""
-	}
-	
-	return availableCards[rand.Intn(len(availableCards))]
-}
-
-func ChooseRandomCard(deck *Deck) string {
-	return deck.cardNames[rand.Intn(deck.numCards)]
 }
