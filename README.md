@@ -28,7 +28,7 @@ separately in the image or a bind volume, but if you know you can do that you pr
 event, running an application in Docker that's already optimized to be a single binary with no state is kind of gratuitous,
 so it's not very important that it be perfect.
 
-Or you can use Docker Desktop which is pretty gratuitous, but why not.:
+Or you can use Docker Desktop which is even _more_ gratuitous, but why not.:
 * docker-compose up --detach
 
 TODO:
