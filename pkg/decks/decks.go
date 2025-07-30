@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const DecksDir string = "decks"
+const CardsDir string = "decks"
 
 type Deck struct {
 	Name      string
@@ -23,7 +23,7 @@ func NewDeck(deckName string) *Deck {
 
 // FindDecks discovers all available decks in the embedded filesystem
 func FindDecks(rootFS fs.FS) map[string]*Deck {
-	deckEntries, err := fs.ReadDir(rootFS, DecksDir)
+	deckEntries, err := fs.ReadDir(rootFS, CardsDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func FindDecks(rootFS fs.FS) map[string]*Deck {
 
 // getDeckEntries returns the card entries for a given deck
 func getDeckEntries(rootFS fs.FS, deckEntry fs.DirEntry) []fs.DirEntry {
-	deckPath := path.Join(DecksDir, deckEntry.Name())
+	deckPath := path.Join(CardsDir, deckEntry.Name())
 	cardEntries, err := fs.ReadDir(rootFS, deckPath)
 	if err != nil {
 		log.Fatal(err)
@@ -83,7 +83,7 @@ func ChooseRandomCard(deck *Deck) string {
 
 // GetCardPath returns the full path to a card file
 func GetCardPath(deckName, cardName string) string {
-	return path.Join(DecksDir, deckName, cardName)
+	return path.Join(CardsDir, deckName, cardName)
 }
 
 // GetCardNameWithoutExtension removes the file extension from a card name

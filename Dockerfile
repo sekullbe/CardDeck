@@ -12,6 +12,7 @@ COPY go.sum ./
 RUN go mod download
 
 COPY *.go ./
+COPY pkg ./pkg
 COPY templates ./templates
 COPY decks ./decks
 COPY css ./css
