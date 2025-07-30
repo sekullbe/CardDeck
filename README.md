@@ -28,11 +28,15 @@ separately in the image or a bind volume, but if you know you can do that you pr
 event, running an application in Docker that's already optimized to be a single binary with no state is kind of gratuitous,
 so it's not very important that it be perfect.
 
+Or you can use Docker Desktop which is pretty gratuitous, but why not.:
+* docker-compose up --detach
+
 TODO:
 * Add documentation links like an image of a sample card from the GMA manual
 * Allow loading decks from zip files instead of open directories
 * Switch to randomize inverting cards on draw
 * redo in a tool like gowebly or gohtmx
+* Clean up the card buttons so they don't take up so much space. Maybe a button for each deck with two active areas.
 
 Credits:
 * Tarot deck from [Luciella Elisabeth Scarlett](https://luciellaes.itch.io/rider-waite-smith-tarot-cards-cc0) (Public Domain and CC0 license)
